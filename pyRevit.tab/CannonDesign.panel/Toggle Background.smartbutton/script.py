@@ -10,6 +10,8 @@ from pyrevit.coreutils import Timer
 timer = Timer()
 # ------------------------------------------------------------------------------
 
+__context__ = 'zerodoc'
+__title__ = 'Toggle\nBackground'
 
 from System.Collections.Generic import List
 
