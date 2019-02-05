@@ -1,0 +1,12 @@
+{
+    "builtin": "False",
+    "default_enabled": "True",
+    "type": "extension",
+    "rocket_mode_compatible": "False",
+    "name": "MyExtension",
+    "description": "Brett's Extension",
+    "author": "Brett Beckemeyer",
+    "author_profile": "https://github.com/antonbondarchuk",
+    "image" : "",
+    "dependencies": []
+}
