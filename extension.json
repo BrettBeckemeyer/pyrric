@@ -1,0 +1,18 @@
+{
+    "extensions": [
+        {
+            "builtin": "False",
+            "default_enabled": "True",
+            "type": "extension",
+            "rocket_mode_compatible": "True",
+            "name": "pyrric",
+            "description": "pyrric test",
+            "author": "Brett Beckemeyer",
+            "author_profile": "https://github.com/BrettBeckemeyer",
+            "url": "https://github.com/BrettBeckemeyer/pyrric.git",
+            "website": "https://github.com/BrettBeckemeyer/pyrric",
+            "image": "",
+            "dependencies": []
+        }
+    ]
+}
