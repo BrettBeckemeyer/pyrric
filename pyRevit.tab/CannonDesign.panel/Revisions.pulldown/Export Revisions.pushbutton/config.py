@@ -74,4 +74,13 @@ class RevcloudConfigWindow(forms.WPFWindow):
         script.save_config()
         self.Close()
 
+    def handle_url_click(self, sender, args):
+        """Callback for handling click on package website url
+        """
+        script.open_url(sender.NavigateUri.AbsoluteUri)
+
+
 RevcloudConfigWindow('RevcloudWindow.xaml').ShowDialog()
+
+
+

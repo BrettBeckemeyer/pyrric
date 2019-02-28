@@ -8,7 +8,7 @@
             <Grid Background="LightGray" DockPanel.Dock="Bottom">
             <DockPanel LastChildFill="False">
 				<!--<Image DockPanel.Dock="Left" Height="20" Source="\\cd-ddrd01\Library\Dynamo\Custom Nodes\CD Logo_80.png" Margin="10,5,0,5"/><-->
-				<TextBlock DockPanel.Dock="Left" FontFamily="Verdana" FontWeight="Light" Foreground="SlateGray" FontSize="9"> Created by <Hyperlink Foreground="Red" NavigateUri="https://github.com/BrettBeckemeyer">BrettBeckemeyer</Hyperlink></TextBlock>
+				<TextBlock DockPanel.Dock="Left" FontFamily="Verdana" FontWeight="Light" Foreground="SlateGray" FontSize="9"> Created by <Hyperlink Foreground="Red" Click="handle_url_click" NavigateUri="https://github.com/BrettBeckemeyer">BrettBeckemeyer</Hyperlink></TextBlock>
                 <Button DockPanel.Dock="Right" x:Name="save_b" Content="Save Settings" Click="save_options" Width="100" Margin="0,5,15,5"/>
 				<Button DockPanel.Dock="Right" x:Name="cancel_b" Content="Cancel" Click="cancel" Width="100" Margin="0,5,0,5"/>
             </DockPanel>
