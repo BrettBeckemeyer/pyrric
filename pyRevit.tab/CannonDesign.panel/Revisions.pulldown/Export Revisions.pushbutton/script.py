@@ -742,6 +742,8 @@ rev_cloud_sheets = []
 addlrevs = []
 revised_sheets = []
 rev_sheets_file = []
+all_marks = []
+all_comments = []
 #----------------------------------------------------
 
 #-------FILE WRITING---------------------------------
