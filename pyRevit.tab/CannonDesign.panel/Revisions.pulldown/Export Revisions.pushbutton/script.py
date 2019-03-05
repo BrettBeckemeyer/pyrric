@@ -11,6 +11,7 @@ from pyrevit.revit import query
 from pyrevit import script
 from pyrevit import forms
 import os, shutil, csv, re, sys
+from pyrevit import versionmgr
 from timeit import default_timer as timer
 
 # SET DEBUGG TO TRUE FOR VERBOSE LOGGING IN CONSOLE WINDOW
@@ -39,6 +40,14 @@ filename_manual = "man"
 
 #-----------END PARAMETER DEFINITIONS----------
 
+# 2019/03/05: Added pyrevit version checks
+#-----------GET PYREVIT VERSION----------------
+pyrvt_ver = versionmgr.get_pyrevit_version()
+short_version = \
+      '{}'.format(pyrvt_ver.get_formatted(nopatch=True))
+vv = short_version.split(".")
+pyrvt_ver_main = int(vv[0])
+pyrvt_ver_min = int(vv[1])
 
 #-----------GET CONFIG DATA--------------------
 
@@ -147,7 +156,8 @@ if process_links and worksharing:
 		
 		if refcount > 1:
 #2018-11-29: Added try/except to catch new 4.6 terminology
-			try:
+#2019/03/05: Added pyrevit version checks
+			if (pyrvt_ver_main >= 5) or ((pyrvt_ver_main == 4) and (pyrvt_ver_min >= 5)):
 				selected_extrefs = \
 					forms.SelectFromList.show(
 						ext_refs,
@@ -156,7 +166,7 @@ if process_links and worksharing:
 						button_name='OK',
 						multiselect=True
 						)
-			except:
+			else:
 				selected_extrefs = \
 					forms.SelectFromCheckBoxes.show(
 						ext_refs,
