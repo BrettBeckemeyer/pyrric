@@ -746,9 +746,10 @@ rev_sheets_file = []
 
 #-------FILE WRITING---------------------------------
 # Create export paths
-if not process_links:
-	filename_revclouds = filename_revclouds + "_" + docfile
-	filename_sheets = filename_sheets + "_" + docfile
+# 2019.03.05: Below used to add filename if no linked files selected
+#if not process_links:
+#	filename_revclouds = filename_revclouds + "_" + docfile
+#	filename_sheets = filename_sheets + "_" + docfile
 export_revclouds = os.path.join(docfolder, export_folder, (filename_revclouds + "." + filename_extension))
 export_sheets = os.path.join(docfolder, export_folder, (filename_sheets + "." + filename_extension))
 
