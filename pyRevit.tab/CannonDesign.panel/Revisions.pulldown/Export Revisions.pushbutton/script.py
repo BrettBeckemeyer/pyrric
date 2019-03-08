@@ -3,26 +3,33 @@
 """Updated 2018-11-29 to adapt to version 4.6"""
 """Updated 2019-01-08 to fix sheet prefix extraction"""
 """Updated 2019-02-01 to replace deprecated get_project_info"""
+"""Updated 2019-03-05 to add pyrevit version checks"""
+"""Updated 2019-03-08 to add unicode codec processing"""
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 
 from pyrevit import coreutils
+# 2019/03/08: Added codecs for Unicode
+from pyrevit.coreutils import os, re, shutil, codecs
 from pyrevit import revit, DB
-from pyrevit.revit import query
+from pyrevit.revit import query, sys
 from pyrevit import script
 from pyrevit import forms
-import os, shutil, csv, re, sys
+import csv
 from pyrevit import versionmgr
-from timeit import default_timer as timer
+
+
 
 # SET DEBUGG TO TRUE FOR VERBOSE LOGGING IN CONSOLE WINDOW
 debugg = False
 
-start = timer()
+#2019/03/08: modified to use coreutils timer module
+timer = coreutils.Timer()
 #logger = script.get_logger()
 # ...
 
 #----------BASIC PARAMETER DEFINITIONS--------
 
+# Note: at some point it would be good to add variable TYPE to variable names...
 sht_placeholder = "ZZ"
 rev_count = 0
 sheets_count = 0
@@ -31,6 +38,42 @@ sheets_count_total = 0
 worksharing = False
 FileError = 0
 
+# LINKED MODEL variables
+lnks = [] # FEC of linked model RevitLinkInstances
+ext_refs = [] # FEC of ExternalFileReferenceType.RevitLink
+er_names = [] # names of selected linked models
+lnkinst = [] # instances of selected linked models
+lnkdocs = [] # documents of selected linked models
+lnk_errors = [] # container for errors related to linked models
+refcount = 0 # count of linked references
+selected_extrefs = [] # holding of linked models selected from dialog
+
+# SHEETS variables
+all_sheets = [] # container to hold all sheets collected from all models
+sheetsnotsorted = []
+sheets_filename = []
+revs_filename = []
+docsheets = [] # container to hold sheets from active model
+
+# CLOUDS variables
+all_clouds = []
+docclouds = []
+
+# ITERATION variables for link processing
+doclnkpath = ""
+lnkfolder = ""
+lnkfile = ""
+isheets = []
+iclouds = []
+irevisions = []
+
+# ITERATION variables for sheet processing
+volx = ""
+shtitem = ""
+restN = ""
+sheet_disc = ""
+prefix = ""
+
 # Sets variables for export filenames
 backup_extension = "bak"
 filename_extension = "csv"
@@ -38,7 +81,34 @@ filename_revclouds = "x_revclouds"
 filename_sheets = "x_sheets"
 filename_manual = "man"
 
+# EXPORT variables
+sheet_table = []
+table_revclouds = []
+blank = "00"
+rev_cloud_sheets = []
+qty = 0
+addlrevs = []
+revised_sheets = []
+rev_sheets_file = []
+
+""" ITERATION variables for tables
+r = ''
+rev = ''
+revdes = ''
+revdate = ''
+reason = ''
+rID = ''
+viewno = ''
+comment = ''
+viewname = ''
+shtnum = ''
+viewname = ''
+shtfile = ""
+thisdoc = ""
+"""
+
 #-----------END PARAMETER DEFINITIONS----------
+
 
 # 2019/03/05: Added pyrevit version checks
 #-----------GET PYREVIT VERSION----------------
@@ -48,6 +118,7 @@ short_version = \
 vv = short_version.split(".")
 pyrvt_ver_main = int(vv[0])
 pyrvt_ver_min = int(vv[1])
+
 
 #-----------GET CONFIG DATA--------------------
 
@@ -100,7 +171,6 @@ console.add_style(
     'tr:nth-child(odd) {background-color: #f2f2f2}'
     )
 
-
 #--------END CONSOLE AND STYLES-----------------------
 
 
@@ -137,10 +207,9 @@ blank = BlankObj()
 empty = "$"
 #------------------------------------------------------
 
-
+#-------PROCESS LINKS AND FILL DICTIONARY--------------
 if process_links and worksharing:
-	ext_refs = []
-	#------GET REVIT LINKS AS INSTANCES----------------------
+	#------GET REVIT LINKS AS INSTANCES----------------
 	try:
 		lnks = DB.FilteredElementCollector(revit.doc).OfClass(DB.RevitLinkInstance)
 		ext_refs = query.get_links(DB.ExternalFileReferenceType.RevitLink)
@@ -148,13 +217,12 @@ if process_links and worksharing:
 		worksharing = False
 		print "No linked models to process."
 		console.insert_divider()
-
-	er_names = []
 	
 	if ext_refs and worksharing:
 		refcount = len(ext_refs)
 		
-		if refcount > 1:
+#2019-03-06: Fixed refcount for greater than 0, instead of 1 and deleted refcount == 1
+		if refcount > 0:
 #2018-11-29: Added try/except to catch new 4.6 terminology
 #2019/03/05: Added pyrevit version checks
 			if (pyrvt_ver_main >= 5) or ((pyrvt_ver_main == 4) and (pyrvt_ver_min >= 5)):
@@ -175,12 +243,10 @@ if process_links and worksharing:
 						button_name='OK',
 						checked_only=True
 						)
-		elif refcount == 1:
-			selected_extrefs = extrefs
 		elif refcount == 0:
 			worksharing = False
 		if selected_extrefs:
-			#------DIALOG BOX TO RELOAD LINKS------------------------
+			#------DIALOG BOX TO RELOAD LINKS------------
 			res = forms.alert('Reload Revit links?',
 							yes=True, no=True, ok=False)
 			
@@ -198,10 +264,7 @@ if process_links and worksharing:
 							console.close()
 							sys.exit()
 			
-			#------GET LINK DOCS, CHECK IF LOADED--------------------
-			lnkinst = []
-			lnkdocs = []
-			lnk_errors = []
+			#------GET LINK DOCS, CHECK IF LOADED----------
 			
 			for lnk in lnks:
 				nm = lnk.Name.split(":")[0].strip()
@@ -230,12 +293,6 @@ if process_links and worksharing:
 #-------EXTRACT ELEMENTS FROM ACTIVE MODEL---------------
 print "Collecting elements from active model..."
 
-# Variables list
-all_sheets = []
-sheetsnotsorted = []
-sheets_filename = []
-revs_filename = []
-
 # Extract sheets from DOCUMENT
 docsheets = DB.FilteredElementCollector(revit.doc)\
                     .OfCategory(DB.BuiltInCategory.OST_Sheets)\
@@ -254,11 +311,10 @@ if docsheets:
 
 
 # collect clouds from DOCUMENT
-all_clouds = []
 docclouds = DB.FilteredElementCollector(revit.doc)\
                .OfCategory(DB.BuiltInCategory.OST_RevisionClouds)\
                .WhereElementIsNotElementType()\
-			   .ToElements()
+               .ToElements()
 
 if docclouds:
 	try:
@@ -278,7 +334,7 @@ all_revisions = []
 docrevs = DB.FilteredElementCollector(revit.doc)\
                   .OfCategory(DB.BuiltInCategory.OST_Revisions)\
                   .WhereElementIsNotElementType()\
-				  .ToElements()
+                  .ToElements()
 if docrevs:
 	all_revisions.extend(docrevs)
 
@@ -340,7 +396,7 @@ if process_links and worksharing:
 			print lnkfile + " processed with:" + str(sheets_count) + ' sheets, and ' + str(rev_count) + ' revisions.'
 			sheets_count_total = sheets_count_total + sheets_count
 			rev_count_total = rev_count_total + rev_count
-		print str(index) + " Total links processed."
+			print str(index+1) + " Total links processed."
 		console.insert_divider()
 		#-------------------------------------------------------
 	except:
@@ -409,7 +465,7 @@ class RevisedSheet:
             if not coreutils.is_blank(comment):
                 all_comments.add(comment)
         return all_comments
-		
+
     def get_marks(self):
         all_marks = set()
         for cloud in self._clouds:
@@ -428,15 +484,16 @@ class RevisedSheet:
 # REMOVED THIS DEFINITION BECAUSE BREAKS IF NUMBERING IS BY SHEET
 #   def get_revision_numbers(self):
 #       return self._rev_numbers
- 
+
+
 #-------CREATE EXPORT TABLE FOR SHEETS-----------
+
 print "\nAssembling Sheets table for export..."
+
 # create sheet table structure
-sheet_table = []
 sheet_table.append(["Sheet Number","Sheet Name","Volume","Prefix","Sequence","Sheet Discipline"])
 # script-wide parameters for sheets
-revised_sheets = []
-rev_sheets_file = []
+
 try:
 	numchars = int(prefix_numchars)
 except:
@@ -461,6 +518,7 @@ for index, sheet in enumerate(all_sheets):
 		shtitem = ""
 		restN = ""
 		sheet_disc = ""
+		prefix = ""
 		
 		try:
 			# get the value of the parameter used for volume definition
@@ -526,13 +584,7 @@ console.insert_divider()
 #------ASSEMBLE TABLE OF REVISIONS FOR EXPORT-----
 print "\nAssembling Revision Clouds table for export..."
 
-table_revclouds = []
 table_revclouds.append(["Sheet Number","Sheet Qty","Filename","Element ID","View Name","Reason Code","ID","View Number","Comment","Revision Description","Revision Date"])
-blank = "00"
-rev_cloud_sheets = []
-qty = 0
-addlrevs = []
-
 
 if debugg: print '\nManually placed clouds:'
 #	Iterate through all sheets and get manually placed revisions
@@ -562,86 +614,7 @@ if process_manual:
 				table_revclouds.append([shtnum, qty, shtfile, rev, viewname, reason, rID, viewno, comment, revdes, revdate])
 		except:
 			if debugg: print "no additional revision"
-			
-# <<<<<<<<<<<----THIS SECTION BELOW CAN BE REMOVED---->>>>>>>>>>>
-'''
-	try:
-		thisclouds = rev_sheet.get_clouds()
-		#-------DEBUG TABLE---------------------------------
-		if debugg:
-			for row in thisclouds:
-				print shtnum + ': ' + str(row.Id)
-		
-		#	Iterate through all revision clouds and retrieve parameters
-		for i in thisclouds:
-			reason = ''
-			rID = ''
-			rev = i.Id.ToString()
-			rev_cloud_sheets.append(i.Id.ToString())
-			
-			view = thisdoc.GetElement(i.OwnerViewId)
-			try: 
-				viewname = view.ViewName 
-			except: 
-				viewname = shtnum + " - " + rev_sheet.sheet_name
-			
-			try:
-				mark = i.LookupParameter('Mark').AsString()
-			except:
-				mark = ""
-			
-			# <<<<<<<<<<<-DUPLICATED BELOW, CAN BE TURNED INTO FUNCTION->>>>>>>>>>>>>
-			#	Mark extraction to reason & ID
-			if mark:
-				if '.' in mark or ':' in mark:
-					temp = mark.replace(":", ".").split(".")
-					reason = temp[0].rjust(2,'0')
-					rID = reason + "." + (temp[1].rjust(2,'0'))
-				else:
-					reason = mark
-					rID = reason + "." + blank
-			#	End Mark extraction
-			
-			comments = i.LookupParameter('Comments').AsString()
-			
-			#	Comments extraction to viewno, comment		
-			#	if comment exists (not empty)
-			if comments:
-			#	if comments has colon or vertical separator
-				if '|' in comments[:9] or ':' in comments[:9]:
-					temp1 = comments[:9].replace(":", "|")
-					temp2 = comments[9:]
-			#	if comments has period
-				else:
-					if '.' in comments[:9]:
-						temp1 = comments[:9].replace(".", "|")
-						temp2 = comments[9:]
-			#	if comments is blank (empty)
-					else:
-						temp1 = '-' + '|'
-						temp2 = comments
-				temp = (temp1 + temp2).split("|")
-				viewno = temp[0]
-				comment = temp[1].strip()
-			else:
-				viewno = '-'
-				comment = ''
-			#	End Comments extraction
-			
-			revdes = i.LookupParameter('Revision Description').AsString()
-			revdate = i.LookupParameter('Revision Date').AsString()
-			
-			#	Create table of revision cloud parameters for export
-			table_revclouds.append([shtnum, qty, shtfile, rev, viewname, reason, rID, viewno, comment, revdes, revdate])
-		
-	except:
-		a = "a"
-	
-	#print(shtnum, rev, mark, comments, revdes, revdate)
-#--------------------------------------------------------------
 
-print "...done."
-'''
 
 console.insert_divider()
 
@@ -775,9 +748,9 @@ else:
 	print "\nRevision Cloud export file not found, new file will be created."
 
 # Write CSV output for Revision Clouds
-#with open(export_revclouds, 'w', newline='') as f:
+# 2019/03/08: Added codecs for Unicode
 try:
-	with open(export_revclouds, 'w+') as f:
+	with codecs.open(export_revclouds, 'w+', encoding='utf-8') as f:
 		print "\nWriting Revision Cloud export to: "
 		print export_revclouds
 		writer = csv.writer(f, lineterminator='\n')
@@ -805,9 +778,9 @@ else:
 	print "Sheets export file not found, new file will be created."
 
 # Write CSV output for Sheets
-#with open(export_revclouds, 'w', newline='') as f:
+# 2019/03/08: Added codecs for Unicode
 try:
-	with open(export_sheets, 'w+') as f:
+	with codecs.open(export_sheets, 'w+', encoding='utf-8') as f:
 		print "\nWriting Sheets export..."
 		print export_sheets
 		writer = csv.writer(f, lineterminator='\n')
@@ -837,7 +810,8 @@ print str(sheets_count_total) + " sheets exported"
 print str(rev_count_total) + " revclouds exported"
 print " "
 
-end = (timer() - start)
+#2019/03/08: modified to use coreutils timer module
+end = timer.get_time()
 m, s = divmod(end, 60)
 h, m = divmod(m, 60)
 
