@@ -215,7 +215,7 @@ if process_links and worksharing:
 		ext_refs = query.get_links(DB.ExternalFileReferenceType.RevitLink)
 	except:
 		worksharing = False
-		print "No linked models to process."
+		print("No linked models to process.")
 		console.insert_divider()
 	
 	if ext_refs and worksharing:
@@ -291,7 +291,7 @@ if process_links and worksharing:
 
 
 #-------EXTRACT ELEMENTS FROM ACTIVE MODEL---------------
-print "Collecting elements from active model..."
+print("Collecting elements from active model...")
 
 # Extract sheets from DOCUMENT
 docsheets = DB.FilteredElementCollector(revit.doc)\
@@ -305,7 +305,7 @@ if docsheets:
 	for i in range(sheets_count):
 		sheets_filename.append(docfile)
 	all_sheets.extend(docsheets)
-	print str(sheets_count) + " sheets extracted"
+	print(str(sheets_count) + " sheets extracted")
 	sheets_count_total = sheets_count
 	sheets_count = 0
 
@@ -323,7 +323,7 @@ if docclouds:
 	all_clouds.extend(docclouds)
 	for i in range(rev_count):
 		revs_filename.append(docfile)
-	print str(rev_count) + " revclouds extracted"
+	print(str(rev_count) + " revclouds extracted")
 	rev_count_total = rev_count
 	rev_count = 0
 
@@ -338,13 +338,13 @@ docrevs = DB.FilteredElementCollector(revit.doc)\
 if docrevs:
 	all_revisions.extend(docrevs)
 
-print "...done."
+print("...done.")
 console.insert_divider()
 #--------------------------------------------------------
 
 if process_links and worksharing:
 	#-------COLLECT ELEMENTS FROM LINKED MODELS--------------
-	print "\nCollecting elements from linked models..."
+	print("\nCollecting elements from linked models...")
 
 	# ITERATE THROUGH LINKS AND GATHER ELEMENTS
 	try:
@@ -393,19 +393,19 @@ if process_links and worksharing:
 				all_revisions.extend(irevisions)
 			
 		#	sheetsnotsorted.extend(isheets)
-			print lnkfile + " processed with:" + str(sheets_count) + ' sheets, and ' + str(rev_count) + ' revisions.'
+			print(lnkfile + " processed with:" + str(sheets_count) + ' sheets, and ' + str(rev_count) + ' revisions.')
 			sheets_count_total = sheets_count_total + sheets_count
 			rev_count_total = rev_count_total + rev_count
-			print str(index+1) + " Total links processed."
+			print(str(index+1) + " Total links processed.")
 		console.insert_divider()
 		#-------------------------------------------------------
 	except:
-		print "LINKS NOT PROCESSED!"
-		print "Check that links are loaded and link worksets are loaded / enabled."
+		print("LINKS NOT PROCESSED!")
+		print("Check that links are loaded and link worksets are loaded / enabled.")
 		console.insert_divider()
 else:
-	print "LINKS NOT PROCESSED!"
-	print "Check that links are loaded and link worksets are loaded / enabled."
+	print("LINKS NOT PROCESSED!")
+	print("Check that links are loaded and link worksets are loaded / enabled.")
 	console.insert_divider()
 
 #SORT FOR SHEETS - REMOVED BECAUSE BREAKS FILENAME RETRIEVAL
@@ -488,7 +488,7 @@ class RevisedSheet:
 
 #-------CREATE EXPORT TABLE FOR SHEETS-----------
 
-print "\nAssembling Sheets table for export..."
+print("\nAssembling Sheets table for export...")
 
 # create sheet table structure
 sheet_table.append(["Sheet Number","Sheet Name","Volume","Prefix","Sequence","Sheet Discipline"])
@@ -557,7 +557,7 @@ for index, sheet in enumerate(all_sheets):
 			# check if first character of restN is not alphanumeric, if so strip it out
 			if not (restN[0].isalpha() or restN[0].isdigit()):
 				restN = restN[1:]
-				if debugg: print restN[1:] + " updated"
+				if debugg: print(restN[1:] + " updated")
 			
 			if process_sheetdisc:
 				try:
@@ -570,23 +570,23 @@ for index, sheet in enumerate(all_sheets):
 			rev_sheets_file.append(sheets_filename[index])
 
 #		revised_sheets.append(RevisedSheet(sheet))
-print "...done."
+print("...done.")
 #-------------------------------------------------
 
 #-------DEBUG TABLE---------------------------------
 if debugg:
-	print '\nSheets Table'
+	print('\nSheets Table')
 	for row in sheet_table:
-		print str(row)
+		print(str(row))
 
 console.insert_divider()
 
 #------ASSEMBLE TABLE OF REVISIONS FOR EXPORT-----
-print "\nAssembling Revision Clouds table for export..."
+print("\nAssembling Revision Clouds table for export...")
 
 table_revclouds.append(["Sheet Number","Sheet Qty","Filename","Element ID","View Name","Reason Code","ID","View Number","Comment","Revision Description","Revision Date"])
 
-if debugg: print '\nManually placed clouds:'
+if debugg: print('\nManually placed clouds:')
 #	Iterate through all sheets and get manually placed revisions
 if process_manual:
 	for index, rev_sheet in enumerate(revised_sheets):
@@ -599,7 +599,7 @@ if process_manual:
 		
 		# Get manually placed Revisions and iterate through
 		try:
-			if debugg: print shtnum + ' additional revisions found'
+			if debugg: print(shtnum + ' additional revisions found')
 			addlrevs = rev_sheet.get_addl_revs()
 			for x in addlrevs:
 				r = thisdoc.GetElement(x)
@@ -613,7 +613,7 @@ if process_manual:
 				viewname = shtnum + " - " + rev_sheet.sheet_name
 				table_revclouds.append([shtnum, qty, shtfile, rev, viewname, reason, rID, viewno, comment, revdes, revdate])
 		except:
-			if debugg: print "no additional revision"
+			if debugg: print("no additional revision")
 
 
 console.insert_divider()
@@ -702,7 +702,7 @@ for index, rc in enumerate(all_clouds):
 #-------DEBUG TABLE---------------------------------
 if debugg:
 	for row in table_revclouds:
-		print row
+		print(row)
 
 #-------ZERO OUT LISTS------------------------------
 all_sheets = []
@@ -736,14 +736,14 @@ try:
 except: #handle other exceptions
 	#console.close()
 	FileError = 1
-	print "\nUnexpected error creating directory: ", directory
+	print("\nUnexpected error creating directory: ", directory)
 	#sys.exit()
 
 # Check if file exists and make copy
 if os.path.isfile(export_revclouds):
-	print "\nRevision Cloud export file found..."
+	print("\nRevision Cloud export file found...")
 	shutil.copy(export_revclouds, os.path.join(docfolder, export_folder, (filename_revclouds + "." + backup_extension)))
-	print "...backed up file."
+	print("...backed up file.")
 else:
 	print "\nRevision Cloud export file not found, new file will be created."
 
@@ -751,19 +751,19 @@ else:
 # 2019/03/08: Added codecs for Unicode
 try:
 	with codecs.open(export_revclouds, 'w+', encoding='utf-8') as f:
-		print "\nWriting Revision Cloud export to: "
-		print export_revclouds
+		print("\nWriting Revision Cloud export to: ")
+		print(export_revclouds)
 		writer = csv.writer(f, lineterminator='\n')
 		writer.writerows(table_revclouds)
-		print "...done."
+		print("...done.")
 except IOError as e:
 	#console.close()
-	print "I/O error({0}): {1}".format(e.errno, e.strerror)
+	print("I/O error({0}): {1}".format(e.errno, e.strerror))
 	FileError = 1
 	#sys.exit()
 except: #handle other exceptions
 	#console.close()
-	print "\nUnexpected error writing to Revision Cloud export file: ", sys.exc_info()[0]
+	print("\nUnexpected error writing to Revision Cloud export file: ", sys.exc_info()[0])
 	FileError = 1
 	#sys.exit()
 
@@ -771,29 +771,29 @@ console.insert_divider()
 
 # Check if file exists and make copy
 if os.path.isfile(export_sheets):
-	print "\nSheets export file found..."
+	print("\nSheets export file found...")
 	shutil.copy(export_sheets, os.path.join(docfolder, export_folder, (filename_sheets + "." + backup_extension)))
-	print "...backed up file."
+	print("...backed up file.")
 else:
-	print "Sheets export file not found, new file will be created."
+	print("Sheets export file not found, new file will be created.")
 
 # Write CSV output for Sheets
 # 2019/03/08: Added codecs for Unicode
 try:
 	with codecs.open(export_sheets, 'w+', encoding='utf-8') as f:
-		print "\nWriting Sheets export..."
-		print export_sheets
+		print("\nWriting Sheets export...")
+		print(export_sheets)
 		writer = csv.writer(f, lineterminator='\n')
 		writer.writerows(sheet_table)
-		print "...done."
+		print("...done.")
 except IOError as e:
 	#console.close()
-	print "I/O error({0}): {1}".format(e.errno, e.strerror)
+	print("I/O error({0}): {1}".format(e.errno, e.strerror))
 	FileError = 1
 	#sys.exit()
 except: #handle other exceptions
 	#console.close()
-	print "\nUnexpected error writing to Sheets export file: ", sys.exc_info()[0]
+	print("\nUnexpected error writing to Sheets export file: ", sys.exc_info()[0])
 	FileError = 1
 	#sys.exit()
 
@@ -806,16 +806,16 @@ console.insert_divider()
 #------------------------------------------------
 
 #--------PRINT SUMMARY---------------------------
-print str(sheets_count_total) + " sheets exported"
-print str(rev_count_total) + " revclouds exported"
-print " "
+print(str(sheets_count_total) + " sheets exported")
+print(str(rev_count_total) + " revclouds exported")
+print(" ")
 
 #2019/03/08: modified to use coreutils timer module
 end = timer.get_time()
 m, s = divmod(end, 60)
 h, m = divmod(m, 60)
 
-print "Elapsed time: %d:%02d:%02d" % (h, m, s)
+print("Elapsed time: %d:%02d:%02d" % (h, m, s))
 
 if FileError == 1:
 	print "\nEXPORT NOT COMPLETED!"
