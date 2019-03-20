@@ -155,6 +155,7 @@ console = script.get_output()
 console.set_height(480)
 console.lock_size()
 
+
 report_title = 'Revision Export'
 report_date = coreutils.current_date()
 # 2/1/2019: added query method to replace deprecated revit.get_project_info()
@@ -665,7 +666,7 @@ for index, rc in enumerate(all_clouds):
 				rID = reason + "." + (temp[1].rjust(2,'0'))
 			else:
 				reason = mark
-				rID = reason + "." + blank
+				rID = reason + "." + "00"
 		#	End Mark extraction
 
 		comments = rc.LookupParameter('Comments').AsString()
@@ -803,6 +804,8 @@ sheet_table = []
 
 
 console.insert_divider()
+console.hide()
+console.show()
 #------------------------------------------------
 
 #--------PRINT SUMMARY---------------------------
