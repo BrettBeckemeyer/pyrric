@@ -567,7 +567,8 @@ for index, sheet in enumerate(all_sheets):
 					sheet_disc = sheet_disc
 			
 			sheet_table.append([shtitem,sheet.Name,volx,prefix,restN,sheet_disc])
-			revised_sheets.append(RevisedSheet(sheet))
+			#revised_sheets.append(RevisedSheet(sheet))
+			revised_sheets.append(sheet)
 			rev_sheets_file.append(sheets_filename[index])
 
 #		revised_sheets.append(RevisedSheet(sheet))
@@ -587,11 +588,12 @@ print("\nAssembling Revision Clouds table for export...")
 
 table_revclouds.append(["Sheet Number","Sheet Qty","Filename","Element ID","View Name","Reason Code","ID","View Number","Comment","Revision Description","Revision Date"])
 
-if debugg: print('\nManually placed clouds:')
+if debugg: print('\nRevisions manually assigned to sheets:')
 #	Iterate through all sheets and get manually placed revisions
 if process_manual:
 	for index, rev_sheet in enumerate(revised_sheets):
-		shtnum = unicode_to_ascii(rev_sheet.sheet_number)
+		shtnum = unicode_to_ascii(rev_sheet.SheetNumber)
+		#shtnum = unicode_to_ascii(rev_sheet.sheet_number)
 		shtfile = rev_sheets_file[index]
 		
 		#for shtfile, d in lnk_data.items():
@@ -600,8 +602,9 @@ if process_manual:
 		
 		# Get manually placed Revisions and iterate through
 		try:
-			if debugg: print(shtnum + ' additional revisions found')
-			addlrevs = rev_sheet.get_addl_revs()
+			#addlrevs = rev_sheet.get_addl_revs()
+			addlrevs = rev_sheet.GetAdditionalRevisionIds()
+			if debugg and addlrevs: print(shtnum + ' additional revisions found')
 			for x in addlrevs:
 				r = thisdoc.GetElement(x)
 				rev = rev_sheet.Id.ToString()
@@ -611,10 +614,11 @@ if process_manual:
 				rID = "00"
 				viewno = ''
 				comment = ''
-				viewname = shtnum + " - " + rev_sheet.sheet_name
+				viewname = shtnum + " - " + rev_sheet.Name
 				table_revclouds.append([shtnum, qty, shtfile, rev, viewname, reason, rID, viewno, comment, revdes, revdate])
 		except:
-			if debugg: print("no additional revision")
+			#if debugg: print("no additional revision")
+			print("No additional revision")
 
 
 console.insert_divider()
