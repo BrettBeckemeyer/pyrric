@@ -397,7 +397,8 @@ if process_links and worksharing:
 			print(lnkfile + " processed with:" + str(sheets_count) + ' sheets, and ' + str(rev_count) + ' revisions.')
 			sheets_count_total = sheets_count_total + sheets_count
 			rev_count_total = rev_count_total + rev_count
-			print(str(index+1) + " Total links processed.")
+			links_running = index+1
+		print(str(links_running) + " Total links processed.")
 		console.insert_divider()
 		#-------------------------------------------------------
 	except:
