@@ -5,6 +5,7 @@
 """Updated 2019-02-01 to replace deprecated get_project_info"""
 """Updated 2019-03-05 to add pyrevit version checks"""
 """Updated 2019-03-08 to add unicode codec processing"""
+"""Updated 2019-05-17 to catch odd Sheet Numbers"""
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 
 from pyrevit import coreutils
@@ -557,10 +558,13 @@ for index, sheet in enumerate(all_sheets):
 				prefix = ""
 			
 			# check if first character of restN is not alphanumeric, if so strip it out
-			if not (restN[0].isalpha() or restN[0].isdigit()):
-				restN = restN[1:]
-				if debugg: print(restN[1:] + " updated")
-			
+			# 17-05-2019: added trap to catch empty restN
+			try:
+				if not (restN[0].isalpha() or restN[0].isdigit()):
+					restN = restN[1:]
+					if debugg: print(restN[1:] + " updated")
+			except:
+				continue
 			if process_sheetdisc:
 				try:
 					sheet_disc = sheet.LookupParameter(sheetdisc_param).AsString()
