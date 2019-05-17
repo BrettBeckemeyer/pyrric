@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Create New Revision Cloud Using Mark and Comments Fields"""
+"""Displays the Project-specific Reason IDs from the Change Tracking File"""
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 
 from pyrevit import coreutils
