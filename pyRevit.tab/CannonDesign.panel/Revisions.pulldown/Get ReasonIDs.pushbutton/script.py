@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Displays the Project-specific Reason IDs from the Change Tracking File"""
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
+# Updated 2019-06-12: Added to csv.reader to handle quotes and spaces
 
 from pyrevit import coreutils
 from pyrevit import revit, DB
@@ -144,7 +145,8 @@ class ReasonIDs:
         with open(reasons_file_copy, 'r') as csvfile:
             dialect = csv.Sniffer().sniff(csvfile.read(1024))
             csvfile.seek(0)
-            reader = csv.reader(csvfile, dialect)
+            # 2019-06-12: Added to csv.reader to handle quotes and spaces
+            reader = csv.reader(csvfile, dialect, quotechar='"', delimiter=',', quoting=csv.QUOTE_ALL, skipinitialspace=True)
             lines = list(reader)
             if debugg:
                 print("lines:")
@@ -163,10 +165,16 @@ class ReasonIDs:
             # get list of categories (cat_list) and quantity (cat_count) from filtered list
             cat_list_long = []
             for l in lines2:
-                cat_list_long.append(l[4])
+                try:
+                    cat_list_long.append(l[4])
+                except:
+                    continue
             cat_list = list(set(cat_list_long))
             cat_list.sort()
             cat_count = len(cat_list)
+            if cat_count < 1:
+                print "Data not in expected format."
+                sys.exit()
             if debugg:
                 print(cat_list)
                 print("Quantity: " + str(cat_count))
