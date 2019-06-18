@@ -132,7 +132,8 @@ process_sheetdisc = my_config.get_option('process_sheetdisc', default_value=True
 sheetfilter_exclude = my_config.get_option('filter_exclude', default_value=False)
 sheetfilter_include = my_config.get_option('filter_include', default_value=True)
 sheetfilter_param = my_config.get_option('sheetfilter_param', default_value='Volume Number')
-sheetfilter = my_config.get_option('sheetfilter', default_value='VOLUME')
+# 2019-06-18: removed default value for sheetfilter so empty value does not get filtered
+sheetfilter = my_config.get_option('sheetfilter', default_value='')
 process_manual = my_config.get_option('process_man', default_value=True)
 
 # check if sheetfilter is empty, then set to ZZ placeholder value

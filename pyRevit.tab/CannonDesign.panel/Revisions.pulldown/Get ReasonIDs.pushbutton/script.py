@@ -28,7 +28,7 @@ rundialog = True
 
 #-----------GET CONFIG DATA-------------------------
 my_config = script.get_config()
-rundialog = my_config.get_option('dialog', default_value=True)
+rundialog = my_config.get_option('dialog', default_value=False)
 #---------------------------------------------------
 
 #------CREATE CONSOLE WINDOW------------------------
