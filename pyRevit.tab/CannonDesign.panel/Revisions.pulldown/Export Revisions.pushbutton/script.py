@@ -205,7 +205,7 @@ if BIMCloud:
 		# 2019-06-25: Attempts to read "Project Folder" global parameter value and use it for docfolder
 		proj_folder_param = revit.doc.GetElement(DB.GlobalParametersManager.FindByName(revit.doc, "Project Folder"))
 		proj_folder = proj_folder_param.GetValue().Value
-		path_add = 'E_WORKING\E.01 Design\E.01.1 BIM\Current Model\blank.txt'
+		path_add = 'E_WORKING\\E.01 Design\\E.01.1 BIM\\Current Model\\blank.txt'
 		docpath = os.path.join(proj_folder, path_add)
 	except:
 		# 2019-06-25: if no global parameter "Project Folder" exists, use C:\Temp for output
