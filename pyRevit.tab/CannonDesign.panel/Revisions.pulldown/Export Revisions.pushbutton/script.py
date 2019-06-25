@@ -6,6 +6,7 @@
 """Updated 2019-03-05 to add pyrevit version checks"""
 """Updated 2019-03-08 to add unicode codec processing"""
 """Updated 2019-05-17 to catch odd Sheet Numbers"""
+"""UPdated 2019-06-25 to process BIM360 models"""
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 
 from pyrevit import coreutils
@@ -200,7 +201,15 @@ else:
 	worksharing = False
 	if debugg: print("Worksharing is not enabled")
 if BIMCloud:
-	docpath = 'c:\\Temp\\blank.txt'
+	try: 
+		# 2019-06-25: Attempts to read "Project Folder" global parameter value and use it for docfolder
+		proj_folder_param = revit.doc.GetElement(DB.GlobalParametersManager.FindByName(revit.doc, "Project Folder"))
+		proj_folder = proj_folder_param.GetValue().Value
+		path_add = 'E_WORKING\E.01 Design\E.01.1 BIM\Current Model\blank.txt'
+		docpath = os.path.join(proj_folder, path_add)
+	except:
+		# 2019-06-25: if no global parameter "Project Folder" exists, use C:\Temp for output
+		docpath = 'c:\\Temp\\blank.txt'
 if not docpath:
 	docpath = revit.doc.PathName
 
