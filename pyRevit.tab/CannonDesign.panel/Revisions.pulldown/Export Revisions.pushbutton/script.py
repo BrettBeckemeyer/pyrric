@@ -28,7 +28,7 @@ timer = coreutils.Timer()
 #logger = script.get_logger()
 # ...
 
-#----------BASIC PARAMETER DEFINITIONS--------
+#----------BASIC VARIABLE DEFINITIONS--------
 
 # Note: at some point it would be good to add variable TYPE to variable names...
 sht_placeholder = "ZZ"
@@ -108,7 +108,7 @@ shtfile = ""
 thisdoc = ""
 """
 
-#-----------END PARAMETER DEFINITIONS----------
+#-----------END VARIABLE DEFINITIONS----------
 
 
 # 2019/03/05: Added pyrevit version checks
@@ -162,7 +162,7 @@ report_title = 'Revision Export'
 report_date = coreutils.current_date()
 # 2/1/2019: added query method to replace deprecated revit.get_project_info()
 try:
-	report_project = revit.guery.get_project_info().name
+	report_project = revit.query.get_project_info().name
 except:
 	report_project = revit.get_project_info().name
 
@@ -176,18 +176,37 @@ console.add_style(
 
 #--------END CONSOLE AND STYLES-----------------------
 
+#--------CHECK FOR BIM360 MODEL-----------------------
+# 2019-06-24: Added check for BIM360 models
+filter = "BIM 360:"
+if filter in revit.doc.PathName:
+	BIMCloud = True
+	if debugg: print("This is a cloud-based model!")
+else:
+	BIMCloud = False
+#-----------------------------------------------------
+
 
 #-----RETURN DOCUMENT FOLDER AND FILENAME-------------
 
 # Get full path of current document
-try:
-	docpath = DB.ModelPathUtils.ConvertModelPathToUserVisiblePath(revit.doc.GetWorksharingCentralModelPath())
+# 2019-06-24: changed path finding to use pyrevit built-in tools
+if forms.check_workshared(doc=revit.doc):
+	if debugg: print("Worksharing is enabled")
 	worksharing = True
-except:
-	docpath = revit.doc.PathName
+	if not BIMCloud:
+		docpath = revit.query.get_central_path(doc=revit.doc)
+else:
 	worksharing = False
+	if debugg: print("Worksharing is not enabled")
+if BIMCloud:
+	docpath = 'c:\\Temp\\blank.txt'
+if not docpath:
+	docpath = revit.doc.PathName
+
 # Split file path
 (docfolder, docfile) = os.path.split(docpath)
+if debugg: print("docfolder: " + docfolder)
 #------------------------------------------------------
 
 
@@ -211,20 +230,30 @@ empty = "$"
 #------------------------------------------------------
 
 #-------PROCESS LINKS AND FILL DICTIONARY--------------
+# 2019-06-24: added check for BIM360
 if process_links and worksharing:
 	#------GET REVIT LINKS AS INSTANCES----------------
 	try:
 		lnks = DB.FilteredElementCollector(revit.doc).OfClass(DB.RevitLinkInstance)
-		ext_refs = query.get_links(DB.ExternalFileReferenceType.RevitLink)
+		#ext_refs = query.get_links(DB.ExternalFileReferenceType.RevitLink)
+		# 2019-06-24: if model is cloud-based, set ext_refs to empty
+		if not BIMCloud:
+			ext_refs = query.get_links(DB.ExternalFileReferenceType.RevitLink)
+		else:
+			ext_refs = []
+		if debugg:
+			print("ext_refs: " )
+			print(ext_refs)
 	except:
 		worksharing = False
 		print("No linked models to process.")
 		console.insert_divider()
 	
-	if ext_refs and worksharing:
+	if lnks and worksharing:
 		refcount = len(ext_refs)
 		
 #2019-03-06: Fixed refcount for greater than 0, instead of 1 and deleted refcount == 1
+#2019-06-24: Empty ext_refs (resulting from cloud-based model) keeps the dialog boxes from appearing
 		if refcount > 0:
 #2018-11-29: Added try/except to catch new 4.6 terminology
 #2019/03/05: Added pyrevit version checks
@@ -246,13 +275,10 @@ if process_links and worksharing:
 						button_name='OK',
 						checked_only=True
 						)
-		elif refcount == 0:
-			worksharing = False
 		if selected_extrefs:
 			#------DIALOG BOX TO RELOAD LINKS------------
 			res = forms.alert('Reload Revit links?',
 							yes=True, no=True, ok=False)
-			
 			for extref in selected_extrefs:
 				er_names.append(extref.name)
 				if res:
@@ -266,27 +292,31 @@ if process_links and worksharing:
 						if not res2:
 							console.close()
 							sys.exit()
-			
-			#------GET LINK DOCS, CHECK IF LOADED----------
-			
+		# 2019-06-24: if cloud-based model, include all links (since dialog boxes do not work)
+		if BIMCloud:
 			for lnk in lnks:
 				nm = lnk.Name.split(":")[0].strip()
+				er_names.append(nm)
+		
+		#------GET LINK DOCS, CHECK IF LOADED----------
+		# 2019-06-24: Added yes/no to dialog
+		# 2019-06-24: Addition of BIMCloud here forces all links to be processed for cloud-based models
+		if selected_extrefs or BIMCloud: 
+			for lnk in lnks:
+				nm = lnk.Name.split(":")[0].strip()
+				if debugg: print("link name: " + nm)
 				if nm in er_names:
 					ddoc = lnk.GetLinkDocument()
 					if not ddoc:
-						lnk_errors.append(nm)
-					if len(lnk_errors) > 0:
-						rel = forms.alert('Link(s) unloaded: ' + str(lnk_errors) + '.\nLoad and run again', ok=True, no=False, yes=False)
-						if rel:
-							console.close()
-							sys.exit()
-						else:
-							console.close()
-							sys.exit()
+						lnk_errors.append(nm + ", ")
 					else:
 						lnkinst.append(lnk)
 						lnkdocs.append(ddoc)
-			
+			if len(lnk_errors) > 0:
+				rel = forms.alert('Link(s) unloaded: ' + str(lnk_errors) + '.\n\nDo you want to continue without processing these links?', ok=False, no=True, yes=True)
+				if not rel:
+					console.close()
+					sys.exit()
 		else:
 			selected_extrefs = []
 			lnks = []
@@ -344,69 +374,63 @@ if docrevs:
 print("...done.")
 console.insert_divider()
 #--------------------------------------------------------
-
+if debugg: print(worksharing)
 if process_links and worksharing:
 	#-------COLLECT ELEMENTS FROM LINKED MODELS--------------
 	print("\nCollecting elements from linked models...")
 
 	# ITERATE THROUGH LINKS AND GATHER ELEMENTS
-	try:
-		for index, doclnk in enumerate(lnkdocs):
-			doclnkpath = ""
-			lnkfolder = ""
-			lnkfile = ""
-
-			# Get full path of current document
+	for index, doclnk in enumerate(lnkdocs):
+		doclnkpath = ""
+		lnkfolder = ""
+		lnkfile = ""
+		# Get full path of current document
+		if not BIMCloud:
+			doclnkpath = DB.ModelPathUtils.ConvertModelPathToUserVisiblePath(doclnk.GetWorksharingCentralModelPath())
+		else:
+			doclnkpath = doclnk.PathName
+		# Split file path
+		(lnkfolder, lnkfile) = os.path.split(doclnkpath)
+		
+		# Add to the link data array
+		lnk_data[lnkfile] = doclnk
+			
+		try:
+			isheets = DB.FilteredElementCollector(doclnk).OfCategory(DB.BuiltInCategory.OST_Sheets).WhereElementIsNotElementType().ToElements()
+			iclouds = DB.FilteredElementCollector(doclnk).OfCategory(DB.BuiltInCategory.OST_RevisionClouds).WhereElementIsNotElementType().ToElements()
+			irevisions = DB.FilteredElementCollector(doclnk).OfCategory(DB.BuiltInCategory.OST_Revisions).WhereElementIsNotElementType().ToElements()
+		except:
+			isheets = []
+			iclouds = []
+			irevisions = []
+		
+		if isheets:
 			try:
-				doclnkpath = DB.ModelPathUtils.ConvertModelPathToUserVisiblePath(doclnk.GetWorksharingCentralModelPath())
-			except:
-				doclnkpath = doclnk.PathName
-			# Split file path
-			(lnkfolder, lnkfile) = os.path.split(doclnkpath)
-			
-			# Add to the link data array
-			lnk_data[lnkfile] = doclnk
-				
+				sheets_count = len(isheets)
+			except: 
+				sheets_count = len([ isheets ])
+			all_sheets.extend(isheets)
+			for s in range(sheets_count):
+				sheets_filename.append(lnkfile)
+		if iclouds:
 			try:
-				isheets = DB.FilteredElementCollector(doclnk).OfCategory(DB.BuiltInCategory.OST_Sheets).WhereElementIsNotElementType().ToElements()
-				iclouds = DB.FilteredElementCollector(doclnk).OfCategory(DB.BuiltInCategory.OST_RevisionClouds).WhereElementIsNotElementType().ToElements()
-				irevisions = DB.FilteredElementCollector(doclnk).OfCategory(DB.BuiltInCategory.OST_Revisions).WhereElementIsNotElementType().ToElements()
-			except:
-				isheets = []
-				iclouds = []
-				irevisions = []
-			
-			if isheets:
-				try:
-					sheets_count = len(isheets)
-				except: 
-					sheets_count = len([ isheets ])
-				all_sheets.extend(isheets)
-				for s in range(sheets_count):
-					sheets_filename.append(lnkfile)
-			if iclouds:
-				try:
-					rev_count = len(iclouds)
-				except: 
-					rev_count = len([ iclouds ])
-				all_clouds.extend(iclouds)
-				for i in range(rev_count):
-					revs_filename.append(lnkfile)
-			if irevisions:
-				all_revisions.extend(irevisions)
-			
-		#	sheetsnotsorted.extend(isheets)
-			print(lnkfile + " processed with:" + str(sheets_count) + ' sheets, and ' + str(rev_count) + ' revisions.')
-			sheets_count_total = sheets_count_total + sheets_count
-			rev_count_total = rev_count_total + rev_count
-			links_running = index+1
-		print(str(links_running) + " Total links processed.")
-		console.insert_divider()
-		#-------------------------------------------------------
-	except:
-		print("LINKS NOT PROCESSED!")
-		print("Check that links are loaded and link worksets are loaded / enabled.")
-		console.insert_divider()
+				rev_count = len(iclouds)
+			except: 
+				rev_count = len([ iclouds ])
+			all_clouds.extend(iclouds)
+			for i in range(rev_count):
+				revs_filename.append(lnkfile)
+		if irevisions:
+			all_revisions.extend(irevisions)
+		
+	#	sheetsnotsorted.extend(isheets)
+		print(lnkfile + " processed with:" + str(sheets_count) + ' sheets, and ' + str(rev_count) + ' revisions.')
+		sheets_count_total = sheets_count_total + sheets_count
+		rev_count_total = rev_count_total + rev_count
+		links_running = index+1
+	print(str(links_running) + " Total links processed.")
+	console.insert_divider()
+	#-------------------------------------------------------
 else:
 	print("LINKS NOT PROCESSED!")
 	print("Check that links are loaded and link worksets are loaded / enabled.")
