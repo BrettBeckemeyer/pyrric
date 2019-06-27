@@ -6,7 +6,8 @@
 """Updated 2019-03-05 to add pyrevit version checks"""
 """Updated 2019-03-08 to add unicode codec processing"""
 """Updated 2019-05-17 to catch odd Sheet Numbers"""
-"""UPdated 2019-06-25 to process BIM360 models"""
+"""Updated 2019-06-25 to process BIM360 models"""
+"""Updated 2019-06-27 to correct BIM360 active model name and added debugging output"""
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 
 from pyrevit import coreutils
@@ -23,6 +24,8 @@ from pyrevit import versionmgr
 
 # SET DEBUGG TO TRUE FOR VERBOSE LOGGING IN CONSOLE WINDOW
 debugg = False
+# SET DEBUGG_OUTPUT TO FALSE TO STOP OUTPUT FOR TESTING
+debugg_output = True
 
 #2019/03/08: modified to use coreutils timer module
 timer = coreutils.Timer()
@@ -182,7 +185,9 @@ console.add_style(
 filter = "BIM 360:"
 if filter in revit.doc.PathName:
 	BIMCloud = True
-	if debugg: print("This is a cloud-based model!")
+	if debugg: print("DEBUG: This is a cloud-based model!")
+	(discard, docfile) = os.path.split(revit.doc.PathName)
+	if debugg: print("DEBUG: docfile is: " + docfile)
 else:
 	BIMCloud = False
 #-----------------------------------------------------
@@ -193,20 +198,20 @@ else:
 # Get full path of current document
 # 2019-06-24: changed path finding to use pyrevit built-in tools
 if forms.check_workshared(doc=revit.doc):
-	if debugg: print("Worksharing is enabled")
+	if debugg: print("DEBUG: Worksharing is enabled")
 	worksharing = True
 	if not BIMCloud:
 		docpath = revit.query.get_central_path(doc=revit.doc)
 else:
 	worksharing = False
-	if debugg: print("Worksharing is not enabled")
+	if debugg: print("DEBUG: Worksharing is not enabled")
 if BIMCloud:
 	try: 
 		# 2019-06-25: Attempts to read "Project Folder" global parameter value and use it for docfolder
 		proj_folder_param = revit.doc.GetElement(DB.GlobalParametersManager.FindByName(revit.doc, "Project Folder"))
 		proj_folder = proj_folder_param.GetValue().Value
-		path_add = 'E_WORKING\\E.01 Design\\E.01.1 BIM\\Current Model\\blank.txt'
-		docpath = os.path.join(proj_folder, path_add)
+		path_add = 'E_WORKING\\E.01 Design\\E.01.1 BIM\\Current Model'
+		docpath = os.path.join(proj_folder, path_add, docfile)
 	except:
 		# 2019-06-25: if no global parameter "Project Folder" exists, use C:\Temp for output
 		docpath = 'c:\\Temp\\blank.txt'
@@ -313,7 +318,7 @@ if process_links and worksharing:
 		if selected_extrefs or BIMCloud: 
 			for lnk in lnks:
 				nm = lnk.Name.split(":")[0].strip()
-				if debugg: print("link name: " + nm)
+				if debugg: print("DEBUG: link name: " + nm)
 				if nm in er_names:
 					ddoc = lnk.GetLinkDocument()
 					if not ddoc:
@@ -347,9 +352,12 @@ if docsheets:
 	for i in range(sheets_count):
 		sheets_filename.append(docfile)
 	all_sheets.extend(docsheets)
+	if debugg: print("DEBUG: sheets extracted")
 	print(str(sheets_count) + " sheets extracted")
 	sheets_count_total = sheets_count
 	sheets_count = 0
+else:
+	print("\nNo sheets in active model")
 
 
 # collect clouds from DOCUMENT
@@ -365,9 +373,12 @@ if docclouds:
 	all_clouds.extend(docclouds)
 	for i in range(rev_count):
 		revs_filename.append(docfile)
+	if debugg: print("DEBUG: revclouds extracted")
 	print(str(rev_count) + " revclouds extracted")
 	rev_count_total = rev_count
 	rev_count = 0
+else:
+	print("\nNo revclouds in active model")
 
  
 # collect revisions from DOCUMENT
@@ -596,7 +607,7 @@ for index, sheet in enumerate(all_sheets):
 			try:
 				if not (restN[0].isalpha() or restN[0].isdigit()):
 					restN = restN[1:]
-					if debugg: print(restN[1:] + " updated")
+					#if debugg: print(restN[1:] + " updated")
 			except:
 				continue
 			if process_sheetdisc:
@@ -616,9 +627,16 @@ print("...done.")
 
 #-------DEBUG TABLE---------------------------------
 if debugg:
-	print('\nSheets Table')
-	for row in sheet_table:
-		print(str(row))
+	nosheetsno = False
+	if len(sheet_table) > 500:
+		sheetsno = forms.alert('Greater than 500 sheets, display results?', yes=True, no=True, ok=False)
+	else:
+		nosheetsno = True
+	if sheetsno or nosheetsno: 
+		print('\nDEBUG: Sheets Table')
+		for row in sheet_table:
+			print('DEBUG: ' + str(row))
+
 
 console.insert_divider()
 
@@ -627,7 +645,7 @@ print("\nAssembling Revision Clouds table for export...")
 
 table_revclouds.append(["Sheet Number","Sheet Qty","Filename","Element ID","View Name","Reason Code","ID","View Number","Comment","Revision Description","Revision Date"])
 
-if debugg: print('\nRevisions manually assigned to sheets:')
+if debugg: print('DEBUG: \nRevisions manually assigned to sheets:')
 #	Iterate through all sheets and get manually placed revisions
 if process_manual:
 	for index, rev_sheet in enumerate(revised_sheets):
@@ -643,7 +661,7 @@ if process_manual:
 		try:
 			#addlrevs = rev_sheet.get_addl_revs()
 			addlrevs = rev_sheet.GetAdditionalRevisionIds()
-			if debugg and addlrevs: print(shtnum + ' additional revisions found')
+			if debugg and addlrevs: print('DEBUG: ' + shtnum + ' additional revisions found')
 			for x in addlrevs:
 				r = thisdoc.GetElement(x)
 				rev = rev_sheet.Id.ToString()
@@ -670,8 +688,8 @@ for index, rc in enumerate(all_clouds):
 	
 	thisdoc = lnk_data.get(shtfile, "")
 	
-	#if rev not in rev_cloud_sheets:
-	if True:
+	if rev not in rev_cloud_sheets:
+	#if True:
 		reason = ''
 		rID = ''
 		qty = 0
@@ -685,7 +703,7 @@ for index, rc in enumerate(all_clouds):
 				sheetview = thisdoc.GetElement(viewz[0])
 				shtnum = sheetview.get_Parameter(DB.BuiltInParameter.SHEET_NUMBER).AsString()
 				shtnum = unicode_to_ascii(shtnum)
-				if debugg: print 'Revclouds found not through sheet collector: ' + shtnum
+				#if debugg: print 'Revclouds found not through sheet collector: ' + shtnum
 #			for index2, v in enumerate(viewz):
 #				if index2 == 0:
 #					#print v
@@ -745,8 +763,16 @@ for index, rc in enumerate(all_clouds):
 
 #-------DEBUG TABLE---------------------------------
 if debugg:
-	for row in table_revclouds:
-		print(row)
+	norevcloudsno = False
+	revclouds_len = len(table_revclouds)
+	if revclouds_len > 1000:
+		revcloudsno = forms.alert('Greater than 1000 revclouds, display results?', yes=True, no=True, ok=False)
+	else:
+		norevcloudsno = True
+	if revcloudsno or norevcloudsno:
+		print('DEBUG: Revclouds Export table:')
+		for row in table_revclouds:
+			print('DEBUG: ' + row)
 
 #-------ZERO OUT LISTS------------------------------
 all_sheets = []
@@ -783,63 +809,67 @@ except: #handle other exceptions
 	print("\nUnexpected error creating directory: ", directory)
 	#sys.exit()
 
-# Check if file exists and make copy
-if os.path.isfile(export_revclouds):
-	print("\nRevision Cloud export file found...")
-	shutil.copy(export_revclouds, os.path.join(docfolder, export_folder, (filename_revclouds + "." + backup_extension)))
-	print("...backed up file.")
+# 2019-06-27: Added check for debugg_output to stop output sequence for testing
+if debugg_output:
+	# Check if file exists and make copy
+	if os.path.isfile(export_revclouds):
+		print("\nRevision Cloud export file found...")
+		shutil.copy(export_revclouds, os.path.join(docfolder, export_folder, (filename_revclouds + "." + backup_extension)))
+		print("...backed up file.")
+	else:
+		print "\nRevision Cloud export file not found, new file will be created."
+
+	# Write CSV output for Revision Clouds
+	# 2019/03/08: Added codecs for Unicode
+	try:
+		with codecs.open(export_revclouds, 'w+', encoding='utf-8') as f:
+			print("\nWriting Revision Cloud export to: ")
+			print(export_revclouds)
+			writer = csv.writer(f, lineterminator='\n')
+			writer.writerows(table_revclouds)
+			print("...done.")
+	except IOError as e:
+		#console.close()
+		print("I/O error({0}): {1}".format(e.errno, e.strerror))
+		FileError = 1
+		#sys.exit()
+	except: #handle other exceptions
+		#console.close()
+		print("\nUnexpected error writing to Revision Cloud export file: ", sys.exc_info()[0])
+		FileError = 1
+		#sys.exit()
+
+	console.insert_divider()
+
+	# Check if file exists and make copy
+	if os.path.isfile(export_sheets):
+		print("\nSheets export file found...")
+		shutil.copy(export_sheets, os.path.join(docfolder, export_folder, (filename_sheets + "." + backup_extension)))
+		print("...backed up file.")
+	else:
+		print("Sheets export file not found, new file will be created.")
+
+	# Write CSV output for Sheets
+	# 2019/03/08: Added codecs for Unicode
+	try:
+		with codecs.open(export_sheets, 'w+', encoding='utf-8') as f:
+			print("\nWriting Sheets export...")
+			print(export_sheets)
+			writer = csv.writer(f, lineterminator='\n')
+			writer.writerows(sheet_table)
+			print("...done.")
+	except IOError as e:
+		#console.close()
+		print("I/O error({0}): {1}".format(e.errno, e.strerror))
+		FileError = 1
+		#sys.exit()
+	except: #handle other exceptions
+		#console.close()
+		print("\nUnexpected error writing to Sheets export file: ", sys.exc_info()[0])
+		FileError = 1
+		#sys.exit()
 else:
-	print "\nRevision Cloud export file not found, new file will be created."
-
-# Write CSV output for Revision Clouds
-# 2019/03/08: Added codecs for Unicode
-try:
-	with codecs.open(export_revclouds, 'w+', encoding='utf-8') as f:
-		print("\nWriting Revision Cloud export to: ")
-		print(export_revclouds)
-		writer = csv.writer(f, lineterminator='\n')
-		writer.writerows(table_revclouds)
-		print("...done.")
-except IOError as e:
-	#console.close()
-	print("I/O error({0}): {1}".format(e.errno, e.strerror))
-	FileError = 1
-	#sys.exit()
-except: #handle other exceptions
-	#console.close()
-	print("\nUnexpected error writing to Revision Cloud export file: ", sys.exc_info()[0])
-	FileError = 1
-	#sys.exit()
-
-console.insert_divider()
-
-# Check if file exists and make copy
-if os.path.isfile(export_sheets):
-	print("\nSheets export file found...")
-	shutil.copy(export_sheets, os.path.join(docfolder, export_folder, (filename_sheets + "." + backup_extension)))
-	print("...backed up file.")
-else:
-	print("Sheets export file not found, new file will be created.")
-
-# Write CSV output for Sheets
-# 2019/03/08: Added codecs for Unicode
-try:
-	with codecs.open(export_sheets, 'w+', encoding='utf-8') as f:
-		print("\nWriting Sheets export...")
-		print(export_sheets)
-		writer = csv.writer(f, lineterminator='\n')
-		writer.writerows(sheet_table)
-		print("...done.")
-except IOError as e:
-	#console.close()
-	print("I/O error({0}): {1}".format(e.errno, e.strerror))
-	FileError = 1
-	#sys.exit()
-except: #handle other exceptions
-	#console.close()
-	print("\nUnexpected error writing to Sheets export file: ", sys.exc_info()[0])
-	FileError = 1
-	#sys.exit()
+	a = "a"
 
 # Zero out tables
 table_revclouds = []
@@ -865,6 +895,10 @@ print("Elapsed time: %d:%02d:%02d" % (h, m, s))
 
 if FileError == 1:
 	print "\nEXPORT NOT COMPLETED!"
-	print "Problem(s) creating or updating files or folders"
+	print "\nProblem(s) creating or updating files or folders"
 else:
-	print "\nExport complete, this window may be closed."
+	if debugg_output:
+		print "\nDEBUG: EXPORT NOT COMPLETED!"
+		print "\nDEBUG: Set debugg_output to True"
+	else:
+		print "\nExport complete, this window may be closed."
