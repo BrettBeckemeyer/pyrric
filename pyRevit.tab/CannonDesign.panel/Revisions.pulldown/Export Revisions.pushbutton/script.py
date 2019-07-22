@@ -12,7 +12,8 @@ __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 
 from pyrevit import coreutils
 # 2019/03/08: Added codecs for Unicode
-from pyrevit.coreutils import os, re, shutil, codecs
+#from pyrevit.coreutils import os, re, shutil, codecs
+import os, re, shutil, codecs
 from pyrevit import revit, DB
 from pyrevit.revit import query, sys
 from pyrevit import script
@@ -897,7 +898,7 @@ if FileError == 1:
 	print "\nEXPORT NOT COMPLETED!"
 	print "\nProblem(s) creating or updating files or folders"
 else:
-	if debugg_output:
+	if not debugg_output:
 		print "\nDEBUG: EXPORT NOT COMPLETED!"
 		print "\nDEBUG: Set debugg_output to True"
 	else:
