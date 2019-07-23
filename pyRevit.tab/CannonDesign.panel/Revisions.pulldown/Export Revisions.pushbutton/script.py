@@ -202,7 +202,10 @@ if forms.check_workshared(doc=revit.doc):
 	if debugg: print("DEBUG: Worksharing is enabled")
 	worksharing = True
 	if not BIMCloud:
-		docpath = revit.query.get_central_path(doc=revit.doc)
+		try:
+			docpath = revit.query.get_central_path(doc=revit.doc)
+		except:
+			docpath = DB.ModelPathUtils.ConvertModelPathToUserVisiblePath(revit.doc.GetWorksharingCentralModelPath())
 else:
 	worksharing = False
 	if debugg: print("DEBUG: Worksharing is not enabled")
