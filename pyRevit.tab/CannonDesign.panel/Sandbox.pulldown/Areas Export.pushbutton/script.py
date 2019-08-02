@@ -24,6 +24,12 @@ timer = coreutils.Timer()
 #logger = script.get_logger()
 # ...
 
+#----------FUTURE FUNCTIONALITY--------
+# In the future, a config dialog should be added to include a shared parameter
+# Until that is functional, this parameter will contain the name of the shared
+# parameter to include. If no parameter by that name exists, it is not included.
+sp1_name = ''
+
 #----------BASIC VARIABLE DEFINITIONS--------
 
 # Note: at some point it would be good to add variable TYPE to variable names...
@@ -39,6 +45,7 @@ export_folder = 'Export_dynamo'
 
 # LINKED MODEL variables
 lnks = [] # FEC of linked model RevitLinkInstances
+links_running = 0
 ext_refs = [] # FEC of ExternalFileReferenceType.RevitLink
 er_names = [] # names of selected linked models
 lnkinst = [] # instances of selected linked models
@@ -47,12 +54,12 @@ lnk_errors = [] # container for errors related to linked models
 refcount = 0 # count of linked references
 selected_extrefs = [] # holding of linked models selected from dialog
 
-# SHEETS variables
-all_areas = [] # container to hold all sheets collected from all models
+# AREAS variables
+all_areas = [] # container to hold all areas collected from all models
 areassnotsorted = []
 areas_filename = []
 revs_filename = []
-docareas = [] # container to hold sheets from active model
+docareas = [] # container to hold areas from active model
 
 # CLOUDS variables
 all_clouds = []
@@ -66,12 +73,6 @@ isheets = []
 iclouds = []
 irevisions = []
 
-# ITERATION variables for sheet processing
-volx = ""
-shtitem = ""
-restN = ""
-sheet_disc = ""
-prefix = ""
 
 # Sets variables for export filenames
 backup_extension = "bak"
@@ -79,35 +80,14 @@ filename_extension = "csv"
 filename_areas = "areas"
 
 # EXPORT variables
-sheet_table = []
-table_revclouds = []
+area_table = []
 blank = "00"
-rev_cloud_sheets = []
 qty = 0
-addlrevs = []
-revised_sheets = []
-rev_sheets_file = []
 
-""" ITERATION variables for tables
-r = ''
-rev = ''
-revdes = ''
-revdate = ''
-reason = ''
-rID = ''
-viewno = ''
-comment = ''
-viewname = ''
-shtnum = ''
-viewname = ''
-shtfile = ""
-thisdoc = ""
-"""
 
 #-----------END VARIABLE DEFINITIONS----------
 
 
-# 2019/03/05: Added pyrevit version checks
 #-----------GET PYREVIT VERSION----------------
 pyrvt_ver = versionmgr.get_pyrevit_version()
 short_version = \
@@ -115,6 +95,15 @@ short_version = \
 vv = short_version.split(".")
 pyrvt_ver_main = int(vv[0])
 pyrvt_ver_min = int(vv[1])
+
+#-----------DIALOG FOR SHARED PARAM------------
+sp1_name = \
+	forms.GetValueWindow.show(
+		'hello',
+		value_type = 'string',
+		prompt='Shared Parameter Name: (leave blank for none)',
+		default='',
+		)
 
 
 #----------CONSOLE WINDOW AND ELEMENT STYLES--------
@@ -158,7 +147,6 @@ else:
 #-----RETURN DOCUMENT FOLDER AND FILENAME-------------
 
 # Get full path of current document
-# 2019-06-24: changed path finding to use pyrevit built-in tools
 if forms.check_workshared(doc=revit.doc):
 	if debugg: print("DEBUG: Worksharing is enabled")
 	worksharing = True
@@ -172,13 +160,11 @@ else:
 	if debugg: print("DEBUG: Worksharing is not enabled")
 if BIMCloud:
 	try: 
-		# 2019-06-25: Attempts to read "Project Folder" global parameter value and use it for docfolder
 		proj_folder_param = revit.doc.GetElement(DB.GlobalParametersManager.FindByName(revit.doc, "Project Folder"))
 		proj_folder = proj_folder_param.GetValue().Value
 		path_add = 'E_WORKING\\E.01 Design\\E.01.1 BIM\\Current Model'
 		docpath = os.path.join(proj_folder, path_add, docfile)
 	except:
-		# 2019-06-25: if no global parameter "Project Folder" exists, use C:\Temp for output
 		docpath = 'c:\\Temp\\blank.txt'
 if not docpath:
 	docpath = revit.doc.PathName
@@ -313,38 +299,7 @@ if docareas:
 else:
 	print("\nNo areas in active model")
 
-"""
-# collect clouds from DOCUMENT
-docclouds = DB.FilteredElementCollector(revit.doc)\
-               .OfCategory(DB.BuiltInCategory.OST_RevisionClouds)\
-               .WhereElementIsNotElementType()\
-               .ToElements()
 
-if docclouds:
-	try:
-		rev_count = len(docclouds)
-	except: len([ docclouds ])
-	all_clouds.extend(docclouds)
-	for i in range(rev_count):
-		revs_filename.append(docfile)
-	if debugg: print("DEBUG: revclouds extracted")
-	print(str(rev_count) + " revclouds extracted")
-	rev_count_total = rev_count
-	rev_count = 0
-else:
-	print("\nNo revclouds in active model")
-
- 
-# collect revisions from DOCUMENT
-all_revisions = []
-
-docrevs = DB.FilteredElementCollector(revit.doc)\
-                  .OfCategory(DB.BuiltInCategory.OST_Revisions)\
-                  .WhereElementIsNotElementType()\
-                  .ToElements()
-if docrevs:
-	all_revisions.extend(docrevs)
-"""
 print("...done.")
 console.insert_divider()
 #--------------------------------------------------------
@@ -406,10 +361,10 @@ def unicode_to_ascii(data):
 
 #-------CREATE EXPORT TABLE FOR SHEETS-----------
 
-print("\nAssembling Sheets table for export...")
+print("\nAssembling Areas table for export...")
 area_table = []
 # create sheet table structure
-area_table.append(["File","Area Number","Area Name","Scheme","Area","Perimeter","Level"])
+area_table.append(["File","Area Number","Area Name","Scheme","Area","Perimeter","Level",sp1_name])
 # script-wide parameters for sheets
 
 # iterate over all sheets
@@ -428,16 +383,25 @@ for index, element_area in enumerate(all_areas):
 		print('\n')
 		print(element_area)
 	
-	dfname = (os.path.split(thisdoc.PathName)[1])
-	areaname = (element_area.get_Parameter(DB.BuiltInParameter.ROOM_NAME).AsString())
-	#areaname = element_area.LookupParameter("Name").AsString
-	areano = (element_area.get_Parameter(DB.BuiltInParameter.ROOM_NUMBER).AsString())
-	areascheme = (element_area.AreaScheme.Name)
 	areasize = element_area.Area
-	perimeter = element_area.Perimeter
-	arealevel = element_area.Level.Name
 	
-	area_table.append([dfname,areano,areaname,areascheme,areasize,perimeter,arealevel])
+	if areasize:
+		dfname = (os.path.split(thisdoc.PathName)[1])
+		areaname = (element_area.get_Parameter(DB.BuiltInParameter.ROOM_NAME).AsString())
+		#areaname = element_area.LookupParameter("Name").AsString
+		areano = (element_area.get_Parameter(DB.BuiltInParameter.ROOM_NUMBER).AsString())
+		areascheme = (element_area.AreaScheme.Name)
+		perimeter = element_area.Perimeter
+		try:
+			arealevel = element_area.Level.Name
+		except:
+			arealevel = ""
+		try:
+			sp1 = element_area.LookupParameter(sp1_name).AsString()
+			area_table.append([dfname,areano,areaname,areascheme,areasize,perimeter,arealevel,sp1])
+		except:
+			area_table.append([dfname,areano,areaname,areascheme,areasize,perimeter,arealevel])
+
 
 print("...done.")
 #-------------------------------------------------
