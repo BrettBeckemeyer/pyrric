@@ -2,6 +2,7 @@
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 import os
 import os.path as op
+#import Tkinter
 
 from pyrevit import forms
 from pyrevit import script
@@ -9,19 +10,20 @@ from pyrevit import coreutils
 from pyrevit import HOST_APP
 from pyrevit.coreutils import envvars
 
+#from pyrevit import Tkinter
+#from Tkinter import *
+#from tkColorChooser import askcolor
 
-class ToggleBG(forms.WPFWindow):
-    def __init__(self, xaml_file_name):
-        forms.WPFWindow.__init__(self, xaml_file_name)
+
+
+"""class getColor():
+    def __init__(self):
+        #color = askcolor()[0]
+        color = forms.select_swatch.show(title="Select alternate background color")
 
         self._config = script.get_config()
 
-        self.selected_color_R.Text = \
-            str(self._config.get_option('selected_color_R', default_value='255'))
-        self.selected_color_G.Text = \
-            str(self._config.get_option('selected_color_G', default_value='255'))
-        self.selected_color_B.Text = \
-            str(self._config.get_option('selected_color_B', default_value='255'))
+        self.selected_color = self._config.get_option('selected_color', default_value=(255,255,255))
 
         script.save_config()
 
@@ -30,14 +32,15 @@ class ToggleBG(forms.WPFWindow):
         self.Close()
 
     def save_options(self, sender, args):
-        self._config.selected_color_R = self.selected_color_R.Text
-        self._config.selected_color_G = self.selected_color_G.Text
-        self._config.selected_color_B = self.selected_color_B.Text
+        self._config.selected_color = color
 
         script.save_config()
         self.Close()
+"""
+color = forms.select_swatch(title="Select alternate background color")
 
-ToggleBG('ToggleBG.xaml').ShowDialog()
-
-
+if not (color is None):
+	_config = script.get_config()
+	_config.selected_color = color
+	script.save_config()
 
