@@ -1,4 +1,5 @@
-"""Toggles background of views between white and black"""
+"""Toggles background of views between white and non_white"""
+"""Updated 2019-08-19 to add dialog for custom color selection"""
 
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 from pyrevit import revit, DB
@@ -25,17 +26,26 @@ app = __revit__.Application
 #app = UIApplication.Application
 # --------------------------------------------
 
+#-----------GET CONFIG DATA-------------------
+my_config = script.get_config()
+selected_color_R = int(my_config.get_option('selected_color_R', default_value='0'))
+selected_color_G = int(my_config.get_option('selected_color_G', default_value='0'))
+selected_color_B = int(my_config.get_option('selected_color_B', default_value='0'))
+#---------------------------------------------
+
+
 #----------SETUP COLORS FOR CHECKING----------
-check_black = []
+check_non_white = []
 check_white = []
 bg_check = []
 
-color_black = DB.Color(0,0,0)
+#color_non_white = DB.Color(0,0,0)
+color_non_white = DB.Color(selected_color_R,selected_color_G,selected_color_B)
 color_white = DB.Color(255,255,255)
 
-check_black.append(color_black.Red)
-check_black.append(color_black.Green)
-check_black.append(color_black.Blue)
+check_non_white.append(color_non_white.Red)
+check_non_white.append(color_non_white.Green)
+check_non_white.append(color_non_white.Blue)
 
 check_white.append(color_white.Red)
 check_white.append(color_white.Green)
@@ -59,14 +69,12 @@ def __selfinit__(script_cmp, ui_button_cmp, __rvt__):
     try:
         abc = app.BackgroundColor
         bg_check1 = get_bg_col(abc)
-        if bg_check1 == check_black:
-            #print('Background is black!')
-            bg_state = False
-        elif bg_check1 == check_white:
-            #print('Background is not white!')
+        if bg_check1 == check_white:
+            #print('Background is white!')
             bg_state = True
         else:
-            exit()
+            #print('Background is not white!')
+            bg_state = False
         script.toggle_icon(bg_state)
         return True
     except:
@@ -77,16 +85,14 @@ def toggle_state():
     abc = app.BackgroundColor
     bg_check2 = get_bg_col(abc)
 
-    if bg_check2 == check_black:
-        #print('Background is black!')
-        app.BackgroundColor = color_white
-        bg_state = True
-    elif bg_check2 == check_white:
-        #print('Background is not black!')
-        app.BackgroundColor = color_black
+    if bg_check2 == check_white:
+        #print('Background is white!')
+        app.BackgroundColor = color_non_white
         bg_state = False
     else:
-        exit()
+        #print('Background is not white!')
+        app.BackgroundColor = color_white
+        bg_state = True
 
     script.toggle_icon(bg_state)
 
