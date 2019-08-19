@@ -10,22 +10,31 @@ Maintainted by: 	Sean Park (spark@cannondesign.com),
 EXTENSIONS
 -------
 
-00_NEW EXTENSIONS-------------------New pyRevit extensions created for pyRevit_Adds
+00_NEW EXTENSIONS-------------------New pyRevit extensions created for pyrric
 
-	Toggle BG.pushbutton----------------Toggle the view background between black and white
-	Export Revisions.pushbutton---------Export Revision Cloud data (plus sheets) to .CSV 
-										files for external workflows
-	Get ReasonIDs.pushbutton------------Displays the project's list of Reason IDs.
+```
+Toggle BG.pushbutton------------Toggle the view background between white and a
+								secondary color
+Revisions.pulldown:
+	Export Revisions.pushbutton-----Export Revision Cloud data (plus sheets) to .CSV 
+									files for external workflows
+	Get ReasonIDs.pushbutton--------Displays the project's list of Reason IDs.
+
+Sandbox.pulldown: (added Sandbox for items in development)
+	Areas Export.pushbutton---------Exports area data from multiple linked models to a
+									.CSV file
+```
 
 01_FIXES FOR EXISTING EXTENSIONS----Updates to original pyRevit extensions
 
 	Set Revisions on Sheets.pushbutton--Allows for selecting sheets on project browser
 	Increment Sheet Numbers.pushbutton--Has setting to exclude alpha characters
 	Decrement Sheet Numbers.pushbutton--Has setting to exclude alpha characters
+	Generate Revision Report.pushbutton-Fixed to work with "by sheet" numbering
 
 NOTES
 -----
 For installations instructions, usage notes, etc - see the readme.md file in each extension's subfolder.
 
 Created: 27/07/2018
-Last Updated: 17/05/2019
+Last Updated: 19/08/2019
