@@ -23,6 +23,8 @@ Revisions.pulldown:
 Sandbox.pulldown: (added Sandbox for items in development)
 	Areas Export.pushbutton---------Exports area data from multiple linked models to a
 									.CSV file
+	Center Rooms or Tags.pushbutton-Centers room location points and / or room tags
+									across active view or entire model
 ```
 
 01_FIXES FOR EXISTING EXTENSIONS----Updates to original pyRevit extensions
