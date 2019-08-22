@@ -7,7 +7,7 @@ import System
 from pyrevit.forms import WPFWindow
 from pyrevit import script, forms
 
-__title__ = 'RoomTool'
+__title__ = 'Center Rooms or Tags'
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 __doc__ = 'Move room location points and / or room tags to room centers'
 
