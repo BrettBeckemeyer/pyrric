@@ -28,15 +28,20 @@ app = __revit__.Application
 
 #-----------GET CONFIG DATA-------------------
 my_config = script.get_config()
-selected_color = my_config.get_option('selected_color')
+selected_color = my_config.get_option('selected_color', default_value=('black',0,0,0))
 #selected_color_R = my_config.get_option('selected_color')[1]
 #selected_color_G = my_config.get_option('selected_color')[2]
 #selected_color_B = my_config.get_option('selected_color')[3]
 #---------------------------------------------
 
-selected_color_R = selected_color[1]
-selected_color_G = selected_color[2]
-selected_color_B = selected_color[3]
+if selected_color:
+	selected_color_R = selected_color[1]
+	selected_color_G = selected_color[2]
+	selected_color_B = selected_color[3]
+else:
+	selected_color_R = 0
+	selected_color_G = 0
+	selected_color_B = 0
 
 #----------SETUP COLORS FOR CHECKING----------
 check_non_white = []
