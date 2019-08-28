@@ -8,6 +8,7 @@
 """Updated 2019-05-17 to catch odd Sheet Numbers"""
 """Updated 2019-06-25 to process BIM360 models"""
 """Updated 2019-06-27 to correct BIM360 active model name and added debugging output"""
+"""Updated 2019-08-28 to add else to handle no links selected or cancelling dialog"""
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 
 from pyrevit import coreutils
@@ -310,6 +311,14 @@ if process_links and worksharing:
 						if not res2:
 							console.close()
 							sys.exit()
+# 2019-08-28 Added else to handle no links selected or cancelling dialog
+		else:
+			#------DIALOG BOX TO EXPORT SINGLE MODEL------------
+			res = forms.alert('No linked models selected, export from active model only?',
+							yes=True, no=True, ok=False)
+			if not res:
+				console.close()
+				sys.exit()
 		# 2019-06-24: if cloud-based model, include all links (since dialog boxes do not work)
 		if BIMCloud:
 			for lnk in lnks:
