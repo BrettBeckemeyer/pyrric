@@ -40,7 +40,8 @@ from pyrevit.coreutils import envvars
 color = forms.select_swatch(title="Select alternate background color")
 
 if not (color is None):
+	#print(color)
 	_config = script.get_config()
-	_config.selected_color = color
+	_config.selected_color = str(color)
 	script.save_config()
 

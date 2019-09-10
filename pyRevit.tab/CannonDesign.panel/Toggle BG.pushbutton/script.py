@@ -1,5 +1,6 @@
 """Toggles background of views between white and non_white"""
 """Updated 2019-08-19 to add dialog for custom color selection"""
+"""Updated 2019-09-10 to deal with hex colors"""
 
 __author__ = 'Brett Beckemeyer (bbeckemeyer@cannondesign.com)'
 from pyrevit import revit, DB
@@ -26,22 +27,40 @@ app = __revit__.Application
 #app = UIApplication.Application
 # --------------------------------------------
 
+def hex_to_rgb(value):
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+
+def get_bg_col(abc):
+    bg_check.append(abc.Red)
+    bg_check.append(abc.Green)
+    bg_check.append(abc.Blue)
+    return bg_check
+
 #-----------GET CONFIG DATA-------------------
 my_config = script.get_config()
 selected_color = my_config.get_option('selected_color', default_value=('black',0,0,0))
-#selected_color_R = my_config.get_option('selected_color')[1]
-#selected_color_G = my_config.get_option('selected_color')[2]
-#selected_color_B = my_config.get_option('selected_color')[3]
 #---------------------------------------------
 
+selected_color_R = 0
+selected_color_G = 0
+selected_color_B = 0
+
 if selected_color:
-	selected_color_R = selected_color[1]
-	selected_color_G = selected_color[2]
-	selected_color_B = selected_color[3]
-else:
-	selected_color_R = 0
-	selected_color_G = 0
-	selected_color_B = 0
+	#print(selected_color[:1])
+	if selected_color[:1] == "#":
+		selected_color = hex_to_rgb(selected_color)
+		#print(selected_color)
+		num = 0
+	else:
+		num = 1
+	selected_color_R = selected_color[num]
+	num = num+1
+	selected_color_G = selected_color[num]
+	num = num+1
+	selected_color_B = selected_color[(num)]
+
 
 #----------SETUP COLORS FOR CHECKING----------
 check_non_white = []
@@ -66,13 +85,6 @@ check_white.append(color_white.Blue)
 #bg_check.append(bg_col.Green)
 #bg_check.append(bg_col.Blue)
 #---------------------------------------------
-
-def get_bg_col(abc):
-    bg_check.append(abc.Red)
-    bg_check.append(abc.Green)
-    bg_check.append(abc.Blue)
-    return bg_check
-
 
 def __selfinit__(script_cmp, ui_button_cmp, __rvt__):
     try:
